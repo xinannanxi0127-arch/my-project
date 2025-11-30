@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐍 贪吃蛇游戏</title>
+    <style>
+        /* ==================== 全局样式设置 ==================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            /* 使用 Apple 系统字体 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            /* 疯狂动物城天空蓝色渐变背景 */
+            background: linear-gradient(180deg, #4A90E2 0%, #7EC8E3 50%, #B8E0F0 100%);
+            /* 让内容垂直和水平居中 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* 禁止文字选中（游戏体验更好） */
+            user-select: none;
+            /* 添加背景动画 */
+            animation: gradientShift 20s ease infinite;
+            background-size: 200% 200%;
+            position: relative;
+        }
+
+        /* 添加城市轮廓效果 */
+        body::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 150px;
+            background: linear-gradient(to top, rgba(52, 73, 94, 0.3) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* ==================== 游戏容器 ==================== */
+        .game-container {
+            text-align: center;
+            /* 添加阴影效果，让容器更立体 */
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.2);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* ==================== 标题样式 ==================== */
+        h1 {
+            color: #1d1d1f;
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        /* ==================== 副标题样式 ==================== */
+        .subtitle {
+            color: #86868b;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+
+        /* ==================== 分数面板 ==================== */
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+
+        .score-item {
+            background: linear-gradient(135deg, #4A90E2 0%, #3B7BC4 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 15px;
+            min-width: 150px;
+            box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .score-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(74, 144, 226, 0.6);
+        }
+
+        .score-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .score-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        /* ==================== 游戏画布 ==================== */
+        #gameCanvas {
+            /* 添加边框 */
+            border: 4px solid rgba(74, 144, 226, 0.3);
+            border-radius: 20px;
+            /* 添加阴影 */
+            box-shadow: 0 15px 40px rgba(74, 144, 226, 0.3);
+            display: block;
+            margin: 0 auto 20px;
+            /* 城市道路灰色背景 */
+            background: linear-gradient(135deg, #E8EEF2 0%, #D5E1E8 100%);
+        }
+
+        /* ==================== 控制按钮 ==================== */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #4A90E2 0%, #3B7BC4 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #3B7BC4 0%, #2E5F9E 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(74, 144, 226, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* ==================== 提示信息 ==================== */
+        .instructions {
+            margin-top: 20px;
+            color: #86868b;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .key {
+            background: #f5f5f7;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+            color: #1d1d1f;
+            margin: 0 2px;
+        }
+
+        /* ==================== 游戏结束提示 ==================== */
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px 60px;
+            border-radius: 20px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over.show {
+            display: block;
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .game-over h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #1d1d1f;
+        }
+
+        .game-over p {
+            font-size: 18px;
+            color: #86868b;
+            margin-bottom: 30px;
+        }
+
+        /* ==================== 关卡选择界面 ==================== */
+        .level-select {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 2000;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .level-select.show {
+            display: block;
+            animation: popIn 0.3s ease;
+        }
+
+        .level-select h2 {
+            font-size: 32px;
+            margin-bottom: 30px;
+            color: #1d1d1f;
+            text-align: center;
+        }
+
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .level-card {
+            background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            position: relative;
+        }
+
+        .level-card:hover:not(.locked) {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(74, 144, 226, 0.4);
+            border-color: #4A90E2;
+        }
+
+        .level-card.locked {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .level-card.completed {
+            border-color: #4CAF50;
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+        }
+
+        .level-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .level-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 5px;
+        }
+
+        .level-subtitle {
+            font-size: 12px;
+            color: #86868b;
+            margin-bottom: 8px;
+        }
+
+        .level-target {
+            font-size: 14px;
+            color: #4A90E2;
+            font-weight: 500;
+        }
+
+        .level-lock {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+        }
+
+        .level-check {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+        }
+
+        .level-progress {
+            margin-top: 20px;
+            text-align: center;
+            padding-top: 20px;
+            border-top: 2px solid #f5f5f7;
+        }
+
+        .progress-bar {
+            background: #f5f5f7;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #4A90E2, #7EC8E3);
+            height: 100%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .close-level-select {
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        /* ==================== 当前关卡信息显示 ==================== */
+        .current-level-info {
+            background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        .level-info-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .level-info-icon {
+            font-size: 24px;
+        }
+
+        .level-info-text {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .level-target-info {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <!-- 关卡选择界面 -->
+    <div class="level-select" id="levelSelect">
+        <h2>🗺️ 关卡选择</h2>
+        <div class="level-grid" id="levelGrid">
+            <!-- 关卡卡片将通过JavaScript动态生成 -->
+        </div>
+        <div class="level-progress">
+            <div style="font-size: 14px; color: #86868b; margin-bottom: 10px;">总进度</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+            </div>
+            <div style="font-size: 14px; color: #86868b; margin-top: 10px;">
+                🏆 成就: <span id="achievementCount">0</span>/11
+            </div>
+        </div>
+        <button class="close-level-select" onclick="closeLevelSelect()">返回</button>
+    </div>
+
+    <div class="game-container" id="gameContainer">
+        <h1>🦊 疯狂动物城 · 贪吃蛇</h1>
+        <p class="subtitle">Nick的蓝莓大冒险</p>
+
+        <!-- 当前关卡信息 -->
+        <div class="current-level-info" id="levelInfo">
+            <div class="level-info-left">
+                <span class="level-info-icon" id="currentLevelIcon">🥕</span>
+                <span class="level-info-text" id="currentLevelName">第1关 · 兔子镇农场</span>
+            </div>
+            <div class="level-target-info">
+                目标: <span id="currentTarget">50</span>分
+            </div>
+        </div>
+
+        <!-- 分数显示 -->
+        <div class="score-board">
+            <div class="score-item">
+                <div class="score-label">当前分数</div>
+                <div class="score-value" id="score">0</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">最高分数</div>
+                <div class="score-value" id="highScore">0</div>
+            </div>
+        </div>
+
+        <!-- 游戏画布 -->
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+        <!-- 控制按钮 -->
+        <div class="controls">
+            <button onclick="showLevelSelect()">选择关卡</button>
+            <button onclick="startGame()">开始游戏</button>
+            <button onclick="togglePause()">暂停/继续</button>
+        </div>
+
+        <!-- 操作说明 -->
+        <div class="instructions">
+            <p>使用 <span class="key">↑</span> <span class="key">↓</span> <span class="key">←</span> <span class="key">→</span> 方向键控制蛇的移动</p>
+            <p>按 <span class="key">空格</span> 键暂停/继续游戏</p>
+        </div>
+    </div>
+
+    <!-- 游戏结束弹窗 -->
+    <div class="game-over" id="gameOver">
+        <h2>游戏结束</h2>
+        <p>你的分数: <strong id="finalScore">0</strong></p>
+        <button onclick="showLevelSelect()">选择关卡</button>
+        <button onclick="startGame()">再来一局</button>
+    </div>
+
+    <script>
+        /* ==================== 游戏配置和常量 ==================== */
+
+        // 游戏常量配置
+        const GRID_SIZE = 20;              // 每个格子的大小（像素）
+        const CANVAS_WIDTH = 400;          // 画布宽度
+        const CANVAS_HEIGHT = 400;         // 画布高度
+        const SCORE_PER_FOOD = 10;         // 每个食物的分数
+        const SPEED_INCREASE_INTERVAL = 50; // 每吃多少分加速
+        const SPEED_DECREASE = 20;         // 每次加速减少的毫秒数
+        const MAX_PARTICLES = 30;          // 最大粒子数量
+        const PARTICLE_SPAWN_COUNT = 15;   // 吃食物时生成的粒子数
+
+        // 缓存DOM元素引用
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('highScore');
+        const finalScoreElement = document.getElementById('finalScore');
+        const gameOverElement = document.getElementById('gameOver');
+        const levelSelectElement = document.getElementById('levelSelect');
+        const levelGridElement = document.getElementById('levelGrid');
+        const progressFillElement = document.getElementById('progressFill');
+        const achievementCountElement = document.getElementById('achievementCount');
+        const currentLevelIconElement = document.getElementById('currentLevelIcon');
+        const currentLevelNameElement = document.getElementById('currentLevelName');
+        const currentTargetElement = document.getElementById('currentTarget');
+
+        // 加载狐狸头像图片
+        const foxImage = new Image();
+        foxImage.src = '151dc18c34cc03ad80af42996eeea72f.jpg';
+        let imageLoaded = false;
+        foxImage.onload = function() {
+            imageLoaded = true;
+            draw(); // 图片加载完成后重新绘制
+        };
+
+        // 计算画布能容纳多少个格子
+        const gridSize = GRID_SIZE; // 保留兼容性
+        const tileCount = CANVAS_WIDTH / GRID_SIZE;
+
+        // 蛇的初始位置和属性（开局3节身体）
+        let snake = [
+            {x: 10, y: 10},  // 蛇头
+            {x: 9, y: 10},   // 蛇身第二节
+            {x: 8, y: 10}    // 蛇身第三节（尾巴）
+        ];
+
+        // 蛇的移动方向 (dx: x方向, dy: y方向)
+        let dx = 0;  // 初始不移动
+        let dy = 0;
+
+        // 食物的位置
+        let foodX = 15;
+        let foodY = 15;
+
+        // 游戏状态
+        let score = 0;           // 当前分数
+        let highScore = 0;       // 最高分
+        let gameRunning = false; // 游戏是否正在运行
+        let gamePaused = false;  // 游戏是否暂停
+        let gameSpeed = 350;     // 游戏速度（毫秒） - 非常慢的初始速度
+        let gameLoop;            // 游戏循环定时器
+
+        // 🎨 粒子特效系统
+        let particles = [];      // 粒子数组
+        let eatAnimation = 0;    // 吃食物动画计时器
+
+        // 🏆 成就系统
+        let achievements = {
+            firstBlueberry: false,  // 第一颗蓝莓
+            score50: false,          // 达到50分
+            score100: false,         // 达到100分
+            speedDemon: false,       // 速度达到最快
+            longSnake: false,        // 蛇长度超过10节
+            // 关卡成就
+            level1Complete: false,   // 完成第1关
+            level2Complete: false,   // 完成第2关
+            level3Complete: false,   // 完成第3关
+            level4Complete: false,   // 完成第4关
+            level5Complete: false    // 完成第5关
+        };
+
+        // 🗺️ 关卡系统
+        let currentLevel = 1;        // 当前关卡
+        let obstacles = [];          // 障碍物数组
+
+        // 关卡配置数据
+        const levels = [
+            {
+                id: 1,
+                name: "兔子镇农场",
+                icon: "🥕",
+                subtitle: "Judy的家乡",
+                target: 50,
+                startSpeed: 350,
+                minSpeed: 200,
+                obstacles: [],
+                background: {
+                    canvas: "linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)",
+                    body: "linear-gradient(180deg, #81C784 0%, #66BB6A 50%, #4CAF50 100%)"
+                },
+                unlocked: true
+            },
+            {
+                id: 2,
+                name: "动物城中心",
+                icon: "🏙️",
+                subtitle: "繁华市中心",
+                target: 100,
+                startSpeed: 300,
+                minSpeed: 150,
+                obstacles: [
+                    {x: 5, y: 5}, {x: 6, y: 5}, {x: 5, y: 6}, {x: 6, y: 6},
+                    {x: 14, y: 5}, {x: 15, y: 5}, {x: 14, y: 6}, {x: 15, y: 6},
+                    {x: 5, y: 14}, {x: 6, y: 14}, {x: 5, y: 15}, {x: 6, y: 15},
+                    {x: 14, y: 14}, {x: 15, y: 14}, {x: 14, y: 15}, {x: 15, y: 15}
+                ],
+                background: {
+                    canvas: "linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)",
+                    body: "linear-gradient(180deg, #4A90E2 0%, #7EC8E3 50%, #B8E0F0 100%)"
+                },
+                unlocked: false
+            },
+            {
+                id: 3,
+                name: "北极冰川区",
+                icon: "❄️",
+                subtitle: "Mr. Big的领地",
+                target: 150,
+                startSpeed: 250,
+                minSpeed: 100,
+                obstacles: [
+                    {x: 3, y: 10}, {x: 4, y: 10}, {x: 5, y: 10},
+                    {x: 10, y: 3}, {x: 10, y: 4}, {x: 10, y: 5},
+                    {x: 16, y: 10}, {x: 17, y: 10}, {x: 18, y: 10},
+                    {x: 10, y: 16}, {x: 10, y: 17}, {x: 10, y: 18}
+                ],
+                background: {
+                    canvas: "linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 100%)",
+                    body: "linear-gradient(180deg, #E1F5FE 0%, #B3E5FC 50%, #81D4FA 100%)"
+                },
+                unlocked: false
+            },
+            {
+                id: 4,
+                name: "雨林区迷宫",
+                icon: "🌴",
+                subtitle: "热带密林",
+                target: 200,
+                startSpeed: 200,
+                minSpeed: 80,
+                obstacles: [
+                    // 迷宫墙壁
+                    {x: 0, y: 8}, {x: 1, y: 8}, {x: 2, y: 8}, {x: 3, y: 8}, {x: 4, y: 8},
+                    {x: 6, y: 8}, {x: 7, y: 8}, {x: 8, y: 8}, {x: 9, y: 8},
+                    {x: 11, y: 8}, {x: 12, y: 8}, {x: 13, y: 8}, {x: 14, y: 8},
+                    {x: 16, y: 8}, {x: 17, y: 8}, {x: 18, y: 8}, {x: 19, y: 8},
+                    {x: 8, y: 0}, {x: 8, y: 1}, {x: 8, y: 2}, {x: 8, y: 3},
+                    {x: 8, y: 5}, {x: 8, y: 6}, {x: 8, y: 7},
+                    {x: 11, y: 11}, {x: 11, y: 12}, {x: 11, y: 13}, {x: 11, y: 14},
+                    {x: 11, y: 16}, {x: 11, y: 17}, {x: 11, y: 18}, {x: 11, y: 19}
+                ],
+                background: {
+                    canvas: "linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%)",
+                    body: "linear-gradient(180deg, #2E7D32 0%, #388E3C 50%, #43A047 100%)"
+                },
+                unlocked: false
+            },
+            {
+                id: 5,
+                name: "Nick的终极挑战",
+                icon: "🦊",
+                subtitle: "传奇之路",
+                target: 300,
+                startSpeed: 150,
+                minSpeed: 50,
+                obstacles: [
+                    // 动态随机障碍物，游戏开始时生成
+                ],
+                background: {
+                    canvas: "linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%)",
+                    body: "linear-gradient(180deg, #FF6F00 0%, #FF8F00 50%, #FFA726 100%)"
+                },
+                unlocked: false
+            }
+        ];
+
+        /* ==================== 粒子特效类 ==================== */
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.life = 1;
+                this.size = Math.random() * 4 + 2;
+                this.color = ['#7B68EE', '#5B4FC4', '#3D2E8F', '#2E8B57'][Math.floor(Math.random() * 4)];
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2; // 重力效果
+                this.life -= 0.02;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // 创建粒子爆炸效果
+        function createParticles(x, y, count = 15) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y));
+            }
+        }
+
+        // 更新和绘制所有粒子
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => particle.draw());
+        }
+
+        /* ==================== 华丽音效系统 ==================== */
+
+        // 使用Web Audio API创建丰富的音效
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // 🫐 吃蓝莓音效 - 欢快的上升音阶
+        function playEatSound() {
+            const now = audioContext.currentTime;
+
+            // 创建三个音符的快速旋律 (C-E-G 和弦琶音)
+            const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+
+            notes.forEach((freq, i) => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                const filter = audioContext.createBiquadFilter();
+
+                // 使用三角波产生更柔和的音色
+                osc.type = 'triangle';
+                osc.frequency.value = freq;
+
+                // 设置低通滤波器,让声音更温暖
+                filter.type = 'lowpass';
+                filter.frequency.value = 2000;
+                filter.Q.value = 1;
+
+                // 音符包络: 快速攻击,短暂延音
+                const startTime = now + i * 0.05;
+                const duration = 0.15;
+
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.2, startTime + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+
+                // 连接音频节点
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioContext.destination);
+
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            });
+
+            // 添加打击乐效果 (模拟"啵"的声音)
+            const noise = audioContext.createBufferSource();
+            const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.05, audioContext.sampleRate);
+            const noiseData = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < noiseData.length; i++) {
+                noiseData[i] = Math.random() * 2 - 1;
+            }
+            noise.buffer = noiseBuffer;
+
+            const noiseFilter = audioContext.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.value = 1000;
+            noiseFilter.Q.value = 10;
+
+            const noiseGain = audioContext.createGain();
+            noiseGain.gain.setValueAtTime(0.1, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioContext.destination);
+            noise.start(now);
+        }
+
+        // 🎵 成就解锁音效 - 胜利号角
+        function playAchievementSound() {
+            const now = audioContext.currentTime;
+
+            // 胜利号角旋律 (C-E-G-C)
+            const melody = [
+                {freq: 523.25, time: 0, duration: 0.15},      // C5
+                {freq: 659.25, time: 0.12, duration: 0.15},   // E5
+                {freq: 783.99, time: 0.24, duration: 0.15},   // G5
+                {freq: 1046.50, time: 0.36, duration: 0.3}    // C6
+            ];
+
+            melody.forEach(note => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.value = note.freq;
+
+                const startTime = now + note.time;
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.25, startTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + note.duration);
+
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.start(startTime);
+                osc.stop(startTime + note.duration);
+            });
+
+            // 添加闪亮的高音点缀
+            [1047, 1319, 1568].forEach((freq, i) => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+
+                const startTime = now + 0.4 + i * 0.05;
+                gain.gain.setValueAtTime(0.15, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.1);
+
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.start(startTime);
+                osc.stop(startTime + 0.1);
+            });
+        }
+
+        // 💥 游戏结束音效 - 戏剧性的下降
+        function playGameOverSound() {
+            const now = audioContext.currentTime;
+
+            // 主音效: 戏剧性的下滑音
+            const osc1 = audioContext.createOscillator();
+            const gain1 = audioContext.createGain();
+
+            osc1.type = 'sawtooth';
+            osc1.frequency.setValueAtTime(440, now);
+            osc1.frequency.exponentialRampToValueAtTime(110, now + 0.5);
+
+            gain1.gain.setValueAtTime(0.3, now);
+            gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+            osc1.connect(gain1);
+            gain1.connect(audioContext.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.5);
+
+            // 添加低音轰鸣
+            const osc2 = audioContext.createOscillator();
+            const gain2 = audioContext.createGain();
+
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(220, now);
+            osc2.frequency.exponentialRampToValueAtTime(55, now + 0.6);
+
+            gain2.gain.setValueAtTime(0.2, now);
+            gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+
+            osc2.connect(gain2);
+            gain2.connect(audioContext.destination);
+            osc2.start(now);
+            osc2.stop(now + 0.6);
+
+            // 添加"碰撞"噪音效果
+            const noise = audioContext.createBufferSource();
+            const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.1, audioContext.sampleRate);
+            const noiseData = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < noiseData.length; i++) {
+                noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / noiseData.length * 3);
+            }
+            noise.buffer = noiseBuffer;
+
+            const noiseGain = audioContext.createGain();
+            noiseGain.gain.setValueAtTime(0.3, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+            noise.connect(noiseGain);
+            noiseGain.connect(audioContext.destination);
+            noise.start(now);
+        }
+
+        // ⚡ 加速音效 - 上升的嗖嗖声
+        function playSpeedUpSound() {
+            const now = audioContext.currentTime;
+
+            // 快速上升音
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+
+            filter.type = 'highpass';
+            filter.frequency.value = 500;
+
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioContext.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.2);
+
+            // 添加"嗖"的噪音
+            const noise = audioContext.createBufferSource();
+            const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.15, audioContext.sampleRate);
+            const noiseData = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < noiseData.length; i++) {
+                noiseData[i] = Math.random() * 2 - 1;
+            }
+            noise.buffer = noiseBuffer;
+
+            const noiseFilter = audioContext.createBiquadFilter();
+            noiseFilter.type = 'highpass';
+            noiseFilter.frequency.value = 1000;
+
+            const noiseGain = audioContext.createGain();
+            noiseGain.gain.setValueAtTime(0.15, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioContext.destination);
+            noise.start(now);
+        }
+
+        // 🎮 游戏开始音效 - 欢快的开场
+        function playStartSound() {
+            const now = audioContext.currentTime;
+
+            // 快速上升琶音 (C-E-G-C)
+            const notes = [261.63, 329.63, 392.00, 523.25];
+
+            notes.forEach((freq, i) => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+
+                const startTime = now + i * 0.08;
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.2, startTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.2);
+
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.start(startTime);
+                osc.stop(startTime + 0.2);
+            });
+        }
+
+        // 🎵 背景环境音 - 轻柔的城市氛围(可选)
+        let ambientSound = null;
+        let ambientGain = null;
+
+        function startAmbientSound() {
+            if (ambientSound) return; // 如果已经在播放,不重复创建
+
+            const now = audioContext.currentTime;
+
+            // 创建低频环境音
+            ambientSound = audioContext.createOscillator();
+            ambientGain = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+
+            ambientSound.type = 'sine';
+            ambientSound.frequency.value = 110; // A2
+
+            filter.type = 'lowpass';
+            filter.frequency.value = 200;
+
+            ambientGain.gain.setValueAtTime(0, now);
+            ambientGain.gain.linearRampToValueAtTime(0.03, now + 2); // 缓慢淡入
+
+            ambientSound.connect(filter);
+            filter.connect(ambientGain);
+            ambientGain.connect(audioContext.destination);
+
+            ambientSound.start(now);
+        }
+
+        function stopAmbientSound() {
+            if (!ambientSound) return;
+
+            const now = audioContext.currentTime;
+            ambientGain.gain.linearRampToValueAtTime(0, now + 1); // 缓慢淡出
+
+            setTimeout(() => {
+                if (ambientSound) {
+                    ambientSound.stop();
+                    ambientSound = null;
+                    ambientGain = null;
+                }
+            }, 1100);
+        }
+
+        /* ==================== 关卡系统函数 ==================== */
+
+        // 显示关卡选择界面
+        function showLevelSelect() {
+            document.getElementById('levelSelect').classList.add('show');
+            renderLevelSelect();
+        }
+
+        // 关闭关卡选择界面
+        function closeLevelSelect() {
+            document.getElementById('levelSelect').classList.remove('show');
+        }
+
+        // 渲染关卡选择界面
+        function renderLevelSelect() {
+            const levelGrid = document.getElementById('levelGrid');
+            levelGrid.innerHTML = '';
+
+            levels.forEach(level => {
+                const card = document.createElement('div');
+                card.className = 'level-card';
+
+                // 检查是否完成
+                const isCompleted = achievements[`level${level.id}Complete`];
+                if (isCompleted) {
+                    card.classList.add('completed');
+                }
+
+                // 检查是否解锁
+                if (!level.unlocked) {
+                    card.classList.add('locked');
+                }
+
+                card.innerHTML = `
+                    <div class="level-icon">${level.icon}</div>
+                    <div class="level-name">${level.name}</div>
+                    <div class="level-subtitle">${level.subtitle}</div>
+                    <div class="level-target">目标: ${level.target}分</div>
+                    ${!level.unlocked ? '<div class="level-lock">🔒</div>' : ''}
+                    ${isCompleted ? '<div class="level-check">✅</div>' : ''}
+                `;
+
+                // 只有解锁的关卡可以点击
+                if (level.unlocked) {
+                    card.onclick = () => selectLevel(level.id);
+                }
+
+                levelGrid.appendChild(card);
+            });
+
+            // 更新进度条
+            updateProgress();
+        }
+
+        // 选择关卡
+        function selectLevel(levelId) {
+            currentLevel = levelId;
+            loadLevel(levelId);
+            closeLevelSelect();
+
+            // 显示关卡信息
+            const level = levels[levelId - 1];
+            showAchievement(`进入关卡 ${levelId}`, `${level.icon} ${level.name}`);
+        }
+
+        // 加载关卡
+        function loadLevel(levelId) {
+            const level = levels[levelId - 1];
+
+            // 设置关卡参数
+            gameSpeed = level.startSpeed;
+            obstacles = [...level.obstacles]; // 复制障碍物数组
+
+            // 更新UI显示
+            document.getElementById('currentLevelIcon').textContent = level.icon;
+            document.getElementById('currentLevelName').textContent = `第${levelId}关 · ${level.name}`;
+            document.getElementById('currentTarget').textContent = level.target;
+
+            // 更新背景颜色
+            document.body.style.background = level.background.body;
+            document.body.style.backgroundSize = '200% 200%';
+
+            // 更新画布背景
+            canvas.style.background = level.background.canvas;
+
+            // 重绘画面
+            draw();
+        }
+
+        // 更新进度
+        function updateProgress() {
+            let completedCount = 0;
+            levels.forEach(level => {
+                if (achievements[`level${level.id}Complete`]) {
+                    completedCount++;
+                }
+            });
+
+            const progress = (completedCount / levels.length) * 100;
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = progress + '%';
+            progressFill.textContent = Math.round(progress) + '%';
+
+            // 更新成就计数
+            let achievementCount = 0;
+            Object.values(achievements).forEach(val => {
+                if (val) achievementCount++;
+            });
+            document.getElementById('achievementCount').textContent = achievementCount;
+        }
+
+        // 检查关卡通关
+        function checkLevelComplete() {
+            const level = levels[currentLevel - 1];
+
+            if (score >= level.target) {
+                // 标记当前关卡完成
+                achievements[`level${currentLevel}Complete`] = true;
+
+                // 解锁下一关
+                if (currentLevel < levels.length) {
+                    levels[currentLevel].unlocked = true;
+                }
+
+                // 保存进度
+                saveLevelProgress();
+
+                // 显示通关提示
+                setTimeout(() => {
+                    const nextLevel = currentLevel < levels.length ? levels[currentLevel].name : '已通关所有关卡!';
+                    showAchievement(`🎉 关卡${currentLevel}通关!`, currentLevel < levels.length ? `解锁下一关: ${nextLevel}` : '恭喜通关全部关卡!');
+                    playAchievementSound();
+                }, 500);
+
+                return true;
+            }
+            return false;
+        }
+
+        // 保存关卡进度
+        function saveLevelProgress() {
+            const progress = {
+                achievements: achievements,
+                unlockedLevels: levels.map(l => l.unlocked)
+            };
+            localStorage.setItem('snakeLevelProgress', JSON.stringify(progress));
+        }
+
+        // 加载关卡进度
+        function loadLevelProgress() {
+            const saved = localStorage.getItem('snakeLevelProgress');
+            if (saved) {
+                try {
+                    const progress = JSON.parse(saved);
+                    // 恢复成就状态
+                    Object.assign(achievements, progress.achievements);
+                    // 恢复关卡解锁状态
+                    progress.unlockedLevels.forEach((unlocked, index) => {
+                        if (levels[index]) {
+                            levels[index].unlocked = unlocked;
+                        }
+                    });
+                } catch (e) {
+                    console.error('加载进度失败:', e);
+                }
+            }
+        }
+
+        /* ==================== 成就提示 ==================== */
+
+        function showAchievement(title, message) {
+            // 创建成就提示元素
+            const achievementDiv = document.createElement('div');
+            achievementDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #4A90E2, #3B7BC4);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 10px;
+                box-shadow: 0 10px 30px rgba(74, 144, 226, 0.5);
+                z-index: 10000;
+                animation: slideIn 0.5s ease;
+                font-family: -apple-system, sans-serif;
+            `;
+            achievementDiv.innerHTML = `
+                <div style="font-size: 20px; margin-bottom: 5px;">🏆 ${title}</div>
+                <div style="font-size: 14px; opacity: 0.9;">${message}</div>
+            `;
+
+            document.body.appendChild(achievementDiv);
+
+            setTimeout(() => {
+                achievementDiv.style.animation = 'slideOut 0.5s ease';
+                setTimeout(() => {
+                    document.body.removeChild(achievementDiv);
+                }, 500);
+            }, 3000);
+        }
+
+        // 添加动画样式
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(400px); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(400px); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 检查成就
+        function checkAchievements() {
+            if (!achievements.firstBlueberry && score >= 10) {
+                achievements.firstBlueberry = true;
+                showAchievement('第一颗蓝莓', '恭喜你收集了第一颗蓝莓！');
+                playAchievementSound(); // 🔊 播放成就音效
+            }
+            if (!achievements.score50 && score >= 50) {
+                achievements.score50 = true;
+                showAchievement('蓝莓收集家', '已收集50分蓝莓！');
+                playAchievementSound(); // 🔊 播放成就音效
+            }
+            if (!achievements.score100 && score >= 100) {
+                achievements.score100 = true;
+                showAchievement('蓝莓大师', '已收集100分蓝莓！厉害！');
+                playAchievementSound(); // 🔊 播放成就音效
+            }
+            if (!achievements.speedDemon && gameSpeed <= 150) {
+                achievements.speedDemon = true;
+                showAchievement('闪电侠', '速度已达到极限！');
+                playAchievementSound(); // 🔊 播放成就音效
+            }
+            if (!achievements.longSnake && snake.length >= 10) {
+                achievements.longSnake = true;
+                showAchievement('长蛇传说', 'Nick的尾巴超长啦！');
+                playAchievementSound(); // 🔊 播放成就音效
+            }
+        }
+
+        /* ==================== 初始化游戏 ==================== */
+
+        // 从本地存储读取最高分
+        function loadHighScore() {
+            const saved = localStorage.getItem('snakeHighScore');
+            if (saved) {
+                highScore = parseInt(saved);
+                document.getElementById('highScore').textContent = highScore;
+            }
+        }
+
+        // 保存最高分到本地存储
+        function saveHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('snakeHighScore', highScore);
+                document.getElementById('highScore').textContent = highScore;
+            }
+        }
+
+        /* ==================== 游戏主循环 ==================== */
+
+        function update() {
+            // 如果游戏暂停，不更新
+            if (gamePaused) return;
+
+            // 计算蛇头的新位置
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+            // 检查是否撞墙
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                gameOver();
+                return;
+            }
+
+            // 检查是否撞到自己
+            for (let i = 0; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            // 🏢 检查是否撞到障碍物
+            for (let obstacle of obstacles) {
+                if (head.x === obstacle.x && head.y === obstacle.y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            // 将新的头部添加到蛇的数组开头
+            snake.unshift(head);
+
+            // 检查是否吃到食物
+            if (head.x === foodX && head.y === foodY) {
+                // 🎉 吃到蓝莓特效
+                const particleX = foodX * gridSize + gridSize / 2;
+                const particleY = foodY * gridSize + gridSize / 2;
+                createParticles(particleX, particleY, 20);
+
+                // 🔊 播放音效
+                playEatSound();
+
+                // 💫 触发吃食物动画
+                eatAnimation = 10;
+
+                // 分数增加
+                score += 10;
+                document.getElementById('score').textContent = score;
+
+                // 生成新的食物
+                generateFood();
+
+                // 🏆 检查成就
+                checkAchievements();
+
+                // 🎯 检查关卡通关
+                checkLevelComplete();
+
+                // 每吃5个食物，速度加快（根据关卡的最低速度）
+                const level = levels[currentLevel - 1];
+                if (score % 50 === 0 && gameSpeed > level.minSpeed) {
+                    gameSpeed -= 20;
+                    if (gameSpeed < level.minSpeed) {
+                        gameSpeed = level.minSpeed;
+                    }
+                    clearInterval(gameLoop);
+                    gameLoop = setInterval(update, gameSpeed);
+                    playSpeedUpSound(); // 🔊 播放加速音效
+                }
+            } else {
+                // 如果没吃到食物，移除尾部（保持蛇的长度不变）
+                snake.pop();
+            }
+
+            // 绘制游戏画面
+            draw();
+        }
+
+        /* ==================== 绘制游戏画面 ==================== */
+
+        function draw() {
+            // 更新粒子
+            updateParticles();
+
+            // 更新吃食物动画
+            if (eatAnimation > 0) eatAnimation--;
+
+            // 清空画布 - 使用渐变背景
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#ffffff');
+            gradient.addColorStop(1, '#f8f9fa');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制网格线（更柔和的参考线）
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.03)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= tileCount; i++) {
+                // 垂直线
+                ctx.beginPath();
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+                // 水平线
+                ctx.beginPath();
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
+            }
+
+            // 🏢 绘制障碍物
+            obstacles.forEach(obstacle => {
+                const x = obstacle.x * gridSize;
+                const y = obstacle.y * gridSize;
+
+                // 根据关卡绘制不同风格的障碍物
+                if (currentLevel === 2) {
+                    // 第2关: 蓝色建筑
+                    const buildingGradient = ctx.createLinearGradient(x, y, x + gridSize, y + gridSize);
+                    buildingGradient.addColorStop(0, '#5C6BC0');
+                    buildingGradient.addColorStop(1, '#3F51B5');
+                    ctx.fillStyle = buildingGradient;
+                    ctx.fillRect(x + 1, y + 1, gridSize - 2, gridSize - 2);
+
+                    // 窗户效果
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fillRect(x + 4, y + 4, 4, 4);
+                    ctx.fillRect(x + 12, y + 4, 4, 4);
+                    ctx.fillRect(x + 4, y + 12, 4, 4);
+                    ctx.fillRect(x + 12, y + 12, 4, 4);
+                } else if (currentLevel === 3) {
+                    // 第3关: 白色冰块
+                    const iceGradient = ctx.createRadialGradient(
+                        x + gridSize / 2, y + gridSize / 2, 0,
+                        x + gridSize / 2, y + gridSize / 2, gridSize / 2
+                    );
+                    iceGradient.addColorStop(0, '#E1F5FE');
+                    iceGradient.addColorStop(0.7, '#B3E5FC');
+                    iceGradient.addColorStop(1, '#81D4FA');
+                    ctx.fillStyle = iceGradient;
+                    ctx.fillRect(x + 1, y + 1, gridSize - 2, gridSize - 2);
+
+                    // 冰晶效果
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x + gridSize / 2, y + 3);
+                    ctx.lineTo(x + gridSize / 2, y + gridSize - 3);
+                    ctx.moveTo(x + 3, y + gridSize / 2);
+                    ctx.lineTo(x + gridSize - 3, y + gridSize / 2);
+                    ctx.stroke();
+                } else if (currentLevel === 4) {
+                    // 第4关: 棕色树干
+                    const treeGradient = ctx.createLinearGradient(x, y, x + gridSize, y);
+                    treeGradient.addColorStop(0, '#6D4C41');
+                    treeGradient.addColorStop(0.5, '#5D4037');
+                    treeGradient.addColorStop(1, '#4E342E');
+                    ctx.fillStyle = treeGradient;
+                    ctx.fillRect(x + 1, y + 1, gridSize - 2, gridSize - 2);
+
+                    // 树皮纹理
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x + 5, y);
+                    ctx.lineTo(x + 5, y + gridSize);
+                    ctx.moveTo(x + 15, y);
+                    ctx.lineTo(x + 15, y + gridSize);
+                    ctx.stroke();
+                } else {
+                    // 默认障碍物样式
+                    ctx.fillStyle = '#757575';
+                    ctx.fillRect(x + 1, y + 1, gridSize - 2, gridSize - 2);
+                }
+
+                // 障碍物边框
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x + 1, y + 1, gridSize - 2, gridSize - 2);
+            });
+
+            // 绘制蛇
+            snake.forEach((segment, index) => {
+                if (index === 0) {
+                    // 🦊 使用狐狸图片作为蛇头
+                    if (imageLoaded) {
+                        // 计算吃食物时的放大效果
+                        const scale = 1 + (eatAnimation / 10) * 0.3;
+                        const centerX = segment.x * gridSize + gridSize / 2;
+                        const centerY = segment.y * gridSize + gridSize / 2;
+
+                        // 保存当前画布状态
+                        ctx.save();
+
+                        // 应用放大变换
+                        ctx.translate(centerX, centerY);
+                        ctx.scale(scale, scale);
+                        ctx.translate(-centerX, -centerY);
+
+                        // 设置圆形裁剪区域（让图片显示为圆形）
+                        ctx.beginPath();
+                        ctx.arc(
+                            centerX,
+                            centerY,
+                            gridSize / 2 - 1,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.clip();
+
+                        // 绘制狐狸图片
+                        ctx.drawImage(
+                            foxImage,
+                            segment.x * gridSize,
+                            segment.y * gridSize,
+                            gridSize,
+                            gridSize
+                        );
+
+                        // 恢复画布状态
+                        ctx.restore();
+
+                        // 绘制圆形边框（带发光效果）
+                        const glowIntensity = eatAnimation / 10;
+                        if (glowIntensity > 0) {
+                            ctx.shadowBlur = 15 * glowIntensity;
+                            ctx.shadowColor = '#F59E0B';
+                        }
+                        ctx.strokeStyle = '#F59E0B';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(
+                            centerX,
+                            centerY,
+                            (gridSize / 2 - 1) * scale,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+                    } else {
+                        // 图片未加载时显示黄色圆形作为占位符
+                        const headGradient = ctx.createRadialGradient(
+                            segment.x * gridSize + gridSize / 2,
+                            segment.y * gridSize + gridSize / 2,
+                            0,
+                            segment.x * gridSize + gridSize / 2,
+                            segment.y * gridSize + gridSize / 2,
+                            gridSize / 2
+                        );
+                        headGradient.addColorStop(0, '#FCD34D');
+                        headGradient.addColorStop(1, '#F59E0B');
+                        ctx.fillStyle = headGradient;
+
+                        ctx.beginPath();
+                        ctx.arc(
+                            segment.x * gridSize + gridSize / 2,
+                            segment.y * gridSize + gridSize / 2,
+                            gridSize / 2 - 2,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
+
+                } else {
+                    // 蛇身 - 黄色渐变
+                    const alpha = 1 - (index / snake.length) * 0.6;
+                    const bodyGradient = ctx.createRadialGradient(
+                        segment.x * gridSize + gridSize / 2,
+                        segment.y * gridSize + gridSize / 2,
+                        0,
+                        segment.x * gridSize + gridSize / 2,
+                        segment.y * gridSize + gridSize / 2,
+                        gridSize / 2
+                    );
+                    bodyGradient.addColorStop(0, `rgba(252, 211, 77, ${alpha})`);
+                    bodyGradient.addColorStop(1, `rgba(245, 158, 11, ${alpha * 0.8})`);
+                    ctx.fillStyle = bodyGradient;
+
+                    // 绘制圆角矩形
+                    drawRoundRect(
+                        segment.x * gridSize + 2,
+                        segment.y * gridSize + 2,
+                        gridSize - 4,
+                        gridSize - 4,
+                        6
+                    );
+                }
+            });
+
+            // 🫐 绘制蓝莓食物（疯狂动物城风格）
+            const time = Date.now() / 1000;
+            const pulse = Math.sin(time * 3) * 0.1 + 1; // 脉动效果
+
+            const centerX = foodX * gridSize + gridSize / 2;
+            const centerY = foodY * gridSize + gridSize / 2;
+
+            // 蓝莓主体 - 蓝紫色渐变
+            const blueberryGradient = ctx.createRadialGradient(
+                centerX - 2,
+                centerY - 2,
+                0,
+                centerX,
+                centerY,
+                gridSize / 2 * pulse
+            );
+            blueberryGradient.addColorStop(0, '#7B68EE');
+            blueberryGradient.addColorStop(0.5, '#5B4FC4');
+            blueberryGradient.addColorStop(1, '#3D2E8F');
+            ctx.fillStyle = blueberryGradient;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, gridSize / 2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 蓝莓顶部的小花冠
+            ctx.fillStyle = '#2E8B57';
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY - gridSize / 2 + 2);
+            for (let i = 0; i < 5; i++) {
+                const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                const x = centerX + Math.cos(angle) * 2;
+                const y = centerY - gridSize / 2 + 2 + Math.sin(angle) * 2;
+                ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // 蓝莓高光
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.arc(centerX - 3, centerY - 3, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 蓝莓纹理（小点点）
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const dotX = centerX - 4 + i * 4;
+                    const dotY = centerY - 4 + j * 4;
+                    ctx.beginPath();
+                    ctx.arc(dotX, dotY, 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // 蓝莓光晕
+            ctx.strokeStyle = `rgba(123, 104, 238, ${0.4 * pulse})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, gridSize / 2, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 🎨 绘制所有粒子特效（在最上层）
+            drawParticles();
+        }
+
+        // 绘制圆角矩形的辅助函数
+        function drawRoundRect(x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        /* ==================== 生成食物 ==================== */
+
+        function generateFood() {
+            // 生成随机位置
+            foodX = Math.floor(Math.random() * tileCount);
+            foodY = Math.floor(Math.random() * tileCount);
+
+            // 确保食物不会生成在蛇身上
+            for (let segment of snake) {
+                if (segment.x === foodX && segment.y === foodY) {
+                    // 如果重叠了，重新生成
+                    generateFood();
+                    return;
+                }
+            }
+
+            // 🏢 确保食物不会生成在障碍物上
+            for (let obstacle of obstacles) {
+                if (obstacle.x === foodX && obstacle.y === foodY) {
+                    // 如果重叠了，重新生成
+                    generateFood();
+                    return;
+                }
+            }
+        }
+
+        /* ==================== 游戏控制函数 ==================== */
+
+        // 开始游戏
+        function startGame() {
+            // 加载当前关卡配置
+            loadLevel(currentLevel);
+
+            // 重置游戏状态（开局3节蛇身）
+            snake = [
+                {x: 10, y: 10},  // 蛇头
+                {x: 9, y: 10},   // 蛇身第二节
+                {x: 8, y: 10}    // 蛇身第三节（尾巴）
+            ];
+            dx = 1;  // 初始向右移动
+            dy = 0;
+            score = 0;
+            gamePaused = false;
+            document.getElementById('score').textContent = score;
+
+            // 重置当前关卡的基础成就状态（但保留关卡通关记录）
+            const levelAchievements = {
+                level1Complete: achievements.level1Complete,
+                level2Complete: achievements.level2Complete,
+                level3Complete: achievements.level3Complete,
+                level4Complete: achievements.level4Complete,
+                level5Complete: achievements.level5Complete
+            };
+            achievements = {
+                firstBlueberry: false,
+                score50: false,
+                score100: false,
+                speedDemon: false,
+                longSnake: false,
+                ...levelAchievements
+            };
+
+            // 生成第一个食物
+            generateFood();
+
+            // 隐藏游戏结束提示
+            document.getElementById('gameOver').classList.remove('show');
+
+            // 清除旧的游戏循环
+            if (gameLoop) {
+                clearInterval(gameLoop);
+            }
+
+            // 开始新的游戏循环
+            gameRunning = true;
+            gameLoop = setInterval(update, gameSpeed);
+
+            // 🔊 播放游戏开始音效
+            playStartSound();
+
+            // 🎵 启动背景环境音（可选,非常轻柔）
+            startAmbientSound();
+
+            // 绘制初始画面
+            draw();
+        }
+
+        // 暂停/继续游戏
+        function togglePause() {
+            if (!gameRunning) return;
+            gamePaused = !gamePaused;
+
+            if (gamePaused) {
+                // 暂停时在画布中央显示提示
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('游戏暂停', canvas.width / 2, canvas.height / 2);
+            } else {
+                // 继续时重新绘制
+                draw();
+            }
+        }
+
+        // 游戏结束
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(gameLoop);
+
+            // 🔊 播放游戏结束音效
+            playGameOverSound();
+
+            // 🎵 停止背景环境音
+            stopAmbientSound();
+
+            // 保存最高分
+            saveHighScore();
+
+            // 显示游戏结束界面
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        /* ==================== 键盘控制 ==================== */
+
+        document.addEventListener('keydown', (e) => {
+            // 空格键暂停
+            if (e.code === 'Space') {
+                e.preventDefault();
+                togglePause();
+                return;
+            }
+
+            // 方向键控制
+            switch(e.code) {
+                case 'ArrowUp':
+                    // 不能直接掉头（如果当前向下移动，不能直接向上）
+                    if (dy === 0) {
+                        dx = 0;
+                        dy = -1;
+                    }
+                    e.preventDefault();
+                    break;
+                case 'ArrowDown':
+                    if (dy === 0) {
+                        dx = 0;
+                        dy = 1;
+                    }
+                    e.preventDefault();
+                    break;
+                case 'ArrowLeft':
+                    if (dx === 0) {
+                        dx = -1;
+                        dy = 0;
+                    }
+                    e.preventDefault();
+                    break;
+                case 'ArrowRight':
+                    if (dx === 0) {
+                        dx = 1;
+                        dy = 0;
+                    }
+                    e.preventDefault();
+                    break;
+            }
+        });
+
+        /* ==================== 页面加载时的初始化 ==================== */
+
+        // 加载最高分
+        loadHighScore();
+
+        // 🗺️ 加载关卡进度
+        loadLevelProgress();
+
+        // 🎮 加载第1关(默认关卡)
+        loadLevel(1);
+
+        // 绘制初始画面（空白游戏板）
+        draw();
+
+        // 在画布中央显示开始提示
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#86868b';
+        ctx.font = '24px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('点击"选择关卡"或"开始游戏"', canvas.width / 2, canvas.height / 2);
+    </script>
+</body>
+</html>
