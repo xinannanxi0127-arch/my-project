@@ -1,0 +1,96 @@
+# 病理图像分析配置模板
+# 复制此文件为 config.yaml 并根据需要修改
+
+# 检测参数
+detection:
+  # 颜色范围 (HSV)
+  color_ranges:
+    purple_1:
+      lower: [120, 30, 30]
+      upper: [160, 255, 255]
+    purple_2:
+      lower: [140, 50, 50]
+      upper: [180, 255, 200]
+
+  # 区域过滤
+  min_area: 500  # 最小区域面积（像素）
+  max_area: 50000  # 最大区域面积（像素）
+
+  # 灰度阈值
+  darkness_threshold: 180  # 暗色区域阈值
+
+# 标注参数
+annotation:
+  # 箭头设置
+  max_arrows: 5  # 最多标注数量
+  arrow_distance: 60  # 箭头长度（像素）
+  arrow_thickness: 2  # 箭头粗细
+  arrow_outline_thickness: 4  # 箭头轮廓粗细
+
+  # 圆圈设置
+  circle_radius: 25  # 圆圈半径（像素）
+  circle_thickness: 3  # 圆圈线条粗细
+
+  # 颜色设置 (BGR)
+  arrow_color: [0, 0, 0]  # 黑色
+  outline_color: [255, 255, 255]  # 白色
+  circle_color: [0, 0, 255]  # 红色
+
+# 输出设置
+output:
+  # 文件命名
+  prefix: "annotated_"  # 标注图像前缀
+  debug_prefix: "debug_"  # 调试图像前缀
+
+  # 图像质量
+  jpeg_quality: 95  # JPEG 质量 (0-100)
+
+  # 调试模式
+  show_debug: true  # 是否生成调试图像
+  save_masks: false  # 是否保存中间掩码
+
+# 性能设置
+performance:
+  # 图像处理
+  resize_large_images: true  # 自动缩放大图
+  max_dimension: 4096  # 最大边长（像素）
+
+  # 并行处理
+  parallel_processing: false  # 是否并行处理（实验性）
+  num_workers: 4  # 并行工作进程数
+
+# 高级选项
+advanced:
+  # 形态学操作
+  morph_kernel_size: 5  # 核大小
+  close_iterations: 1  # 闭运算迭代次数
+  open_iterations: 1  # 开运算迭代次数
+
+  # 高斯模糊
+  gaussian_kernel: 21  # 高斯核大小
+  gaussian_sigma: 0  # 高斯标准差（0为自动）
+
+# 染色方法预设
+staining_presets:
+  HE:  # 苏木精-伊红染色（默认）
+    name: "Hematoxylin and Eosin"
+    color_ranges:
+      - [120, 30, 30, 160, 255, 255]
+      - [140, 50, 50, 180, 255, 200]
+
+  PAS:  # 过碘酸-雪夫染色
+    name: "Periodic Acid-Schiff"
+    color_ranges:
+      - [0, 50, 50, 10, 255, 255]  # 红色
+      - [170, 50, 50, 180, 255, 255]  # 品红色
+
+  Masson:  # 马松三色染色
+    name: "Masson's Trichrome"
+    color_ranges:
+      - [100, 50, 50, 130, 255, 255]  # 蓝色（胶原）
+
+# 使用说明
+# 1. 复制此文件为 config.yaml
+# 2. 根据需要修改参数
+# 3. 运行分析时会自动加载配置
+# 4. 命令行参数会覆盖配置文件设置
