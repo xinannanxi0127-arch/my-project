@@ -150,7 +150,7 @@ class PathologyAnalyzer:
         arrow_head_points = np.array([tip, (left_x, left_y), (right_x, right_y)], dtype=np.int32)
         cv2.fillPoly(image, [arrow_head_points], color, cv2.LINE_AA)
 
-    def draw_arrows(self, image, centers, max_arrows=5):
+    def draw_arrows(self, image, centers, max_arrows=3):
         """
         在图像上绘制指向炎症区域的红色箭头（医学病理图风格）
 
@@ -188,22 +188,11 @@ class PathologyAnalyzer:
             start_x = max(20, min(w - 20, start_x))
             start_y = max(20, min(h - 20, start_y))
 
-            # 箭头颜色
-            arrow_color = (0, 0, 0)  # 黑色箭头（更接近医学图像风格）
-            outline_color = (255, 255, 255)  # 白色轮廓
-            circle_color = (0, 0, 255)  # 红色圆圈 BGR
+            # 箭头颜色 - 纯黑色医学标注风格
+            arrow_color = (0, 0, 0)  # 黑色箭头
+            outline_color = (255, 255, 255)  # 白色轮廓（增强可见性）
 
-            # 先绘制红色圆圈标记（在箭头终点）
-            circle_radius = 25  # 圆圈半径
-            circle_thickness = 3  # 圆圈线条粗细
-
-            # 绘制白色外圈（增强对比度）
-            cv2.circle(annotated, (x, y), circle_radius + 1, outline_color, circle_thickness + 2, cv2.LINE_AA)
-
-            # 绘制红色圆圈
-            cv2.circle(annotated, (x, y), circle_radius, circle_color, circle_thickness, cv2.LINE_AA)
-
-            # 绘制白色轮廓箭头（增强可见性）
+            # 绘制白色轮廓箭头（增强对比度）
             self.draw_custom_arrow(annotated, (start_x, start_y), (x, y), outline_color, thickness=4)
 
             # 绘制黑色箭头主体
@@ -211,7 +200,7 @@ class PathologyAnalyzer:
 
         return annotated
 
-    def process_image(self, image_path, max_arrows=5, show_debug=False):
+    def process_image(self, image_path, max_arrows=3, show_debug=False):
         """
         处理单张图像
 
@@ -274,7 +263,7 @@ class PathologyAnalyzer:
 
         return annotated
 
-    def process_all_images(self, max_arrows=5, show_debug=False):
+    def process_all_images(self, max_arrows=3, show_debug=False):
         """
         处理输入文件夹中的所有图像
 
@@ -321,9 +310,9 @@ def main():
     )
 
     # 处理所有图像
-    # max_arrows: 每张图最多标注几个区域
+    # max_arrows: 每张图最多标注几个区域（默认3个，符合医学图像标注标准）
     # show_debug: 是否生成包含中间步骤的调试图
-    analyzer.process_all_images(max_arrows=5, show_debug=True)
+    analyzer.process_all_images(max_arrows=3, show_debug=True)
 
 
 if __name__ == "__main__":
